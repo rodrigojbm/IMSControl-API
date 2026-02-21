@@ -6,7 +6,7 @@
 
         public string Type { get; set; } = "";       // "entrada" | "saida"
         public string Category { get; set; } = "";   // "compra" | "venda" | "producao" | ...
-        public string ItemType { get; set; } = "";   // "insumo" | "produto"
+        public string ItemType { get; set; } = "";   // "item" | "produto"
 
         public int ItemId { get; set; }
         public string ItemName { get; set; } = "";

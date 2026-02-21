@@ -33,68 +33,88 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Product>> Create([FromBody] ProductUpsertDto input)
     {
-        // valida recipe e busca supplies para preencher nome/unidade
-        var recipeItems = await BuildRecipeItems(input.Recipe);
-
-        var product = new Product
+        try
         {
-            Name = input.Name,
-            Description = input.Description,
-            Size = input.Size,
-            Quantity = input.Quantity,
-            MinQuantity = input.MinQuantity,
-            ProductionCost = input.ProductionCost,
-            SalePrice = input.SalePrice,
-            ImageUrl = input.ImageUrl,
-            Recipe = recipeItems
-        };
+            // valida recipe e busca supplies para preencher nome/unidade
+            var recipeItems = await BuildRecipeItems(input.Recipe);
 
-        _db.Products.Add(product);
-        await _db.SaveChangesAsync();
+            var product = new Product
+            {
+                Name = input.Name,
+                Description = input.Description,
+                Size = input.Size,
+                Quantity = input.Quantity,
+                MinQuantity = input.MinQuantity,
+                ProductionCost = input.ProductionCost,
+                SalePrice = input.SalePrice,
+                ImageUrl = input.ImageUrl,
+                Recipe = recipeItems
+            };
 
-        var created = await _db.Products
-            .AsNoTracking()
-            .Include(p => p.Recipe)
-            .FirstAsync(p => p.Id == product.Id);
+            _db.Products.Add(product);
+            await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
+            var created = await _db.Products
+                .AsNoTracking()
+                .Include(p => p.Recipe)
+                .FirstAsync(p => p.Id == product.Id);
+
+            return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<Product>> Update(int id, [FromBody] ProductUpsertDto input)
     {
-        var product = await _db.Products
+        try
+        {
+            var product = await _db.Products
             .Include(p => p.Recipe)
             .FirstOrDefaultAsync(p => p.Id == id);
 
-        if (product is null) return NotFound();
+            if (product is null) return NotFound();
 
-        // campos simples
-        product.Name = input.Name;
-        product.Description = input.Description;
-        product.Size = input.Size;
-        product.Quantity = input.Quantity;
-        product.MinQuantity = input.MinQuantity;
-        product.ProductionCost = input.ProductionCost;
-        product.SalePrice = input.SalePrice;
-        product.ImageUrl = input.ImageUrl;
+            // campos simples
+            product.Name = input.Name;
+            product.Description = input.Description;
+            product.Size = input.Size;
+            product.Quantity = input.Quantity;
+            product.MinQuantity = input.MinQuantity;
+            product.ProductionCost = input.ProductionCost;
+            product.SalePrice = input.SalePrice;
+            product.ImageUrl = input.ImageUrl;
 
-        // recipe (apaga e recria)
-        _db.ProductRecipeItems.RemoveRange(product.Recipe);
-        product.Recipe.Clear();
+            // recipe (apaga e recria)
+            _db.ProductRecipeItems.RemoveRange(product.Recipe);
+            product.Recipe.Clear();
 
-        var recipeItems = await BuildRecipeItems(input.Recipe);
-        foreach (var ri in recipeItems)
-            product.Recipe.Add(ri);
+            var recipeItems = await BuildRecipeItems(input.Recipe);
+            foreach (var ri in recipeItems)
+                product.Recipe.Add(ri);
 
-        await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
 
-        var updated = await _db.Products
-            .AsNoTracking()
-            .Include(p => p.Recipe)
-            .FirstAsync(p => p.Id == id);
+            var updated = await _db.Products
+                .AsNoTracking()
+                .Include(p => p.Recipe)
+                .FirstAsync(p => p.Id == id);
 
-        return Ok(updated);
+            return Ok(updated);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
     }
 
     [HttpDelete("{id:int}")]

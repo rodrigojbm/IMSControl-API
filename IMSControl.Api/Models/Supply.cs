@@ -10,6 +10,7 @@
         public decimal Quantity { get; set; }
         public decimal MinQuantity { get; set; }
         public decimal CostPerUnit { get; set; }
+        public decimal TotalValue { get; set; }
 
         public string? Supplier { get; set; }
         public string? Notes { get; set; }
