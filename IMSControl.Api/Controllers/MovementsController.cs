@@ -1,12 +1,14 @@
-﻿using IMSControl.Api.Data;
+using IMSControl.Api.Data;
 using IMSControl.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IMSControl.Api.Controllers;
 
+[Authorize]
 [ApiController]
-[Route("api/movements")]
+[Route("api/[controller]")]
 public class MovementsController : ControllerBase
 {
     private readonly AppDbContext _db;

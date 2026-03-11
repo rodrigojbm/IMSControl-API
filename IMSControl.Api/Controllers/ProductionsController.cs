@@ -1,10 +1,12 @@
-﻿using IMSControl.Api.Data;
+using IMSControl.Api.Data;
 using IMSControl.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IMSControl.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/productions")]
 public class ProductionsController : ControllerBase
