@@ -12,8 +12,31 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+var jwtKey = builder.Configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("JWT_KEY") ?? "your_super_secret_key_needs_to_be_at_least_32_characters";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "IMSControl";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "IMSControlClient";
+
+builder.Services.AddAuthentication(opt =>
+{
+    opt.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+    opt.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(opt =>
+{
+    opt.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
+
+var connectionString = builder.Configuration.GetConnectionString("Default");
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlServer(connectionString!));
 
 builder.Services.AddCors(opt =>
 {
@@ -28,28 +51,22 @@ builder.Services.AddCors(opt =>
         }
         else
         {
-            // em produção: permita seu domínio do front via variável de ambiente
-            // Ex: CORS_ORIGINS="https://seusite.vercel.app,https://clarigo.com.br"
             var origins = (Environment.GetEnvironmentVariable("CORS_ORIGINS") ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
 
-            if (origins.Length > 0)
-            {
-                p.WithOrigins(origins)
-                 .AllowAnyHeader()
-                 .AllowAnyMethod();
-            }
-            else
-            {
-                // fallback: se você quiser testar rápido, pode liberar tudo
-                // (o ideal é configurar o CORS_ORIGINS!)
-                p.AllowAnyOrigin()
-                 .AllowAnyHeader()
-                 .AllowAnyMethod();
-            }
+            // sempre libera localhost pra testes
+            origins.Add("http://localhost:5173");
+            origins.Add("http://localhost:5174");
+
+            p.WithOrigins(origins.Distinct().ToArray())
+             .AllowAnyHeader()
+             .AllowAnyMethod();
         }
     });
 });
+
+builder.Services.AddScoped<Microsoft.AspNetCore.Identity.IPasswordHasher<IMSControl.Api.Models.User>, Microsoft.AspNetCore.Identity.PasswordHasher<IMSControl.Api.Models.User>>();
 
 var app = builder.Build();
 
@@ -62,11 +79,37 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // Swagger em produção é opcional; se quiser, remova esse bloco.
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// Seed admin user
+using (var scope = app.Services.CreateScope())
+{
+    var _db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var _hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<IMSControl.Api.Models.User>();
+    
+    // Force admin password to admin123
+    var adminUser = _db.Users.SingleOrDefault(u => u.Username == "admin");
+    if (adminUser == null)
+    {
+        adminUser = new IMSControl.Api.Models.User
+        {
+            Username = "admin",
+            Role = "Admin"
+        };
+        adminUser.PasswordHash = _hasher.HashPassword(adminUser, "admin123");
+        _db.Users.Add(adminUser);
+    }
+    else
+    {
+        adminUser.PasswordHash = _hasher.HashPassword(adminUser, "admin123");
+    }
+    _db.SaveChanges();
+}
+
+
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
