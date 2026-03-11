@@ -1,10 +1,13 @@
-﻿using IMSControl.Api.Data;
+using IMSControl.Api.Data;
+using IMSControl.Api.Dtos;
 using IMSControl.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IMSControl.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/supplies")]
 public class SuppliesController : ControllerBase
@@ -18,7 +21,10 @@ public class SuppliesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<Supply>>> List()
     {
-        return await _db.Supplies.AsNoTracking().OrderBy(s => s.Name).ToListAsync();
+        var supplies = await _db.Supplies.AsNoTracking().OrderBy(s => s.Name).ToListAsync();
+        supplies.ForEach(x => x.TotalValue = x.Quantity * x.CostPerUnit);
+
+        return supplies;
     }
 
     [HttpGet("{id:int}")]
@@ -51,9 +57,10 @@ public class SuppliesController : ControllerBase
         supply.Name = input.Name;
         supply.Category = input.Category;
         supply.Unit = input.Unit;
-        supply.Quantity = input.Quantity;
+        //supply.Quantity = input.Quantity;
         supply.MinQuantity = input.MinQuantity;
-        supply.CostPerUnit = input.CostPerUnit;
+        //supply.CostPerUnit = input.CostPerUnit;
+        //supply.TotalValue = input.TotalValue;
         supply.Supplier = input.Supplier;
         supply.Notes = input.Notes;
 

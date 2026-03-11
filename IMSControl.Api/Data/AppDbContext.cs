@@ -1,4 +1,4 @@
-﻿using IMSControl.Api.Models;
+using IMSControl.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace IMSControl.Api.Data;
@@ -13,6 +13,8 @@ public class AppDbContext : DbContext
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<Production> Productions => Set<Production>();
     public DbSet<ProductionSupplyUsed> ProductionSuppliesUsed => Set<ProductionSupplyUsed>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Client> Clients => Set<Client>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

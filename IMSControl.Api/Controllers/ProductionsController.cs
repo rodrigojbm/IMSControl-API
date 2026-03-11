@@ -1,10 +1,12 @@
-﻿using IMSControl.Api.Data;
+using IMSControl.Api.Data;
 using IMSControl.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IMSControl.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/productions")]
 public class ProductionsController : ControllerBase
@@ -16,21 +18,38 @@ public class ProductionsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Production>>> List([FromQuery] string? sort, [FromQuery] int? limit)
+    public async Task<ActionResult> List([FromQuery] string? sort, [FromQuery] int? limit)
     {
-        IQueryable<Production> q = _db.Productions.AsNoTracking().Include(p => p.SuppliesUsed);
+        IQueryable<Production> q = _db.Productions.AsNoTracking()
+            .Include(p => p.SuppliesUsed);
 
-        if (sort == "-productionDate") 
+        if (sort == "-productionDate")
             q = q.OrderByDescending(p => p.ProductionDate).ThenByDescending(p => p.Id);
-        else if (sort == "productionDate") 
+        else if (sort == "productionDate")
             q = q.OrderBy(p => p.ProductionDate).ThenBy(p => p.Id);
-        else 
+        else
             q = q.OrderByDescending(p => p.Id);
 
-        if (limit.HasValue && limit.Value > 0)
-            q = q.Take(limit.Value);
+        if (limit is > 0) q = q.Take(limit.Value);
 
-        return await q.ToListAsync();
+        var result = await q.Select(p => new {
+            p.Id,
+            p.ProductId,
+            p.ProductName,
+            p.Quantity,
+            p.ProductionDate,
+            p.TotalCost,
+            p.Notes,
+            SuppliesUsed = p.SuppliesUsed.Select(s => new {
+                s.Id,
+                s.SupplyId,
+                s.SupplyName,
+                s.QuantityUsed,
+                s.Unit
+            })
+        }).ToListAsync();
+
+        return Ok(result);
     }
 
     [HttpPost]
@@ -72,13 +91,13 @@ public class ProductionsController : ControllerBase
             {
                 Type = "saida",
                 Category = "producao",
-                ItemType = "insumo",
+                ItemType = "item",
                 ItemId = used.SupplyId,
                 ItemName = used.SupplyName,
                 Quantity = used.QuantityUsed,
                 Unit = used.Unit,
                 UnitValue = supply.CostPerUnit,
-                TotalValue = supply.CostPerUnit * used.QuantityUsed,
+                TotalValue = supply.TotalValue,
                 MovementDate = input.ProductionDate,
                 Notes = $"Usado na produção de {input.Quantity}x {input.ProductName}"
             });

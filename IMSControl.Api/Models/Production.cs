@@ -21,7 +21,7 @@
         public int Id { get; set; }
 
         public int ProductionId { get; set; }
-        public Production Production { get; set; } = null!;
+        public Production? Production { get; set; }
 
         public int SupplyId { get; set; }
         public string SupplyName { get; set; } = "";
