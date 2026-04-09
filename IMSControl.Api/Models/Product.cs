@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace IMSControl.Api.Models
 {
@@ -11,6 +11,7 @@ namespace IMSControl.Api.Models
         public string Size { get; set; } = "media";
 
         public int Quantity { get; set; }
+        public int ReservedQuantity { get; set; }
         public int MinQuantity { get; set; }
 
         public decimal ProductionCost { get; set; }
